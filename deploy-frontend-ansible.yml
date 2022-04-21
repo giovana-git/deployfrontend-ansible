@@ -1,0 +1,51 @@
+---
+- hosts: webserver
+  become: yes
+
+  tasks:
+    - name: Instalar Nginx
+      package:
+        name: nginx
+        state: latest
+
+    - name: Instalar Node.Js v.14
+      shell: |
+        node -v || curl -sL https://deb.nodesource.com/setup_12.x | sudo bash - && apt -y install nodejs
+
+    - name: Instalar NPM
+      shell: |
+        npm -v || apt install npm
+        
+    - name: Clonar repositorio do GitHub
+      shell: |
+        if [ ! -d /main-folder/build-folder ]; then
+          mkdir -p /main-folder/build-folder
+          cd /main-folder/build-folder
+          git clone https://github.com/giovana-git/deployfrontend.git
+        fi
+            
+    - name: Comando npm install
+      shell: |
+        cd /main-folder/build-folder/deployfrontend
+        if [ ! -d /main-folder/build-folder/deployfrontend/node_modules ]; then
+          npm install
+        fi
+
+    - name: Comando npm run build
+      shell: |
+        if [ ! -d /main-folder/build-folder/deployfrontend/build ]; then
+          cd /main-folder/build-folder/deployfrontend
+          npm run build
+        fi
+
+    - name: Mover arquivo Build para /var/www/html
+      shell: |
+        if [ ! -d /var/www/html/static ]; then
+          cp -r /main-folder/build-folder/deployfrontend/build/* /var/www/html/
+        fi
+
+    - name: Restarting Nginx
+      service:
+        name: nginx
+        enabled: yes
+        state: restarted
